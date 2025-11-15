@@ -1,122 +1,115 @@
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:image_picker/image_picker.dart';
+import 'dart:io';
+
 
 void main() {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
+
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: ImageCompressorApp(),
+      debugShowCheckedModeBanner: false,
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
 
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
+class ImageCompressorApp extends StatefulWidget {
+  
 
-  final String title;
+  ImageCompressorApp({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<ImageCompressorApp> createState() => _ImageCompressorAppState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _ImageCompressorAppState extends State<ImageCompressorApp> {
+  // stores the original image
+  File? _selectedImage;
+  // stores the compressed image 
+  File? _compressedImage;
+  // checks if compression is ongoing
+  bool _isCompressing = false;
+  // stores error messages
+  String? _error;
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
+
+  // function to pick image from the gallery
+  Future<void> _pickImage() async {
+    try{
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+      if (pickedFile != null){
+        setState((){
+          {
+          // store selected image 
+          _selectedImage =  File(pickedFile.path);
+          // reset previous compressed image
+          _compressedImage = null;
+          // clear any previoud errors
+          _error = null;
+          // show that compression is starting
+          _isCompressing = true;
+
+        }
+        });
+        // compress the selected image
+        await compressImage(_selectedImage!);
+      }
+    } catch (e){
+      setState(() {
+        // store error
+        _error = 'Error picking image $e';
+        // stop compression state
+        _isCompressing =  false;
+      });
+    }
   }
 
+  // function to compress the selected image
+  Future<void> compressImage(File image) async {
+    try{
+      // get a temporary directory to store the compressed image
+      final tempDir = await getTemporaryDirectory();
+      final targetPath = '${tempDir.path}/ compressed_image.jpg';
+
+      // compress the image and store it in the new location
+      var result = await FlutterImageCompress.compressAndGetFile(image.absolute.path, targetPath, quality: 85);
+      if (result != null ){
+        final compressedFile = File(result.path);
+        if(await compressedFile.exists()){
+          final orginalSize = await image.length;
+          final compressedSize = await compressedFile.length();
+          setState(() {
+            
+          });
+        }
+      }
+    }
+  }
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
       appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
+        title: const Text('Image Compressor'),
+
+        backgroundColor: Colors.indigo[300],
+        foregroundColor: Colors.black45,
       ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-          ],
-        ),
+      body: SingleChildScrollView(
+
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
   }
 }
